@@ -15,8 +15,8 @@ def add_parsing_opts():
   parser = OptionParser(usage = "python nanogen_analysis.py [options]", 
                         description = "Main options for running nanogen analysis") 
   parser.add_option("--inputFolder", dest = "inputFolder", default = "files_sergio",
-              help = "Input file to run the analysis.")
-  parser.add_option("--nEvents", dest = "nEvents", type=int, default = 100,
+              help = "Input folder to run the analysis.")
+  parser.add_option("--nEvents", dest = "nEvents", type=int, default = 290000,
               help = "Number of events to process.")
   parser.add_option("--outpath", dest = "outpath", default = "outfiles",
               help = "Number of events to process.")
@@ -50,6 +50,7 @@ if __name__ == "__main__":
   njobs = len(files_)
   
   multiproc( submit, ((opts, f) for f in files_), njobs )
+        
   
 
 
