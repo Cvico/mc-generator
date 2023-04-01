@@ -16,6 +16,7 @@ class ttw_analysis(baseAnalyzer):
     def loop(self):
         """ Here you have to implement your own analysis """
         # Read the input tree
+        print("Reading %s"%self.fname)
         rfile = r.TFile.Open(self.fname)
         t = self.tree_events 
    

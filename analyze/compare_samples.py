@@ -1,161 +1,174 @@
 # -- Import libraries -- #
 import ROOT as r
 import numpy as np
-from framework.ttw_analysis import ttw_analysis
-from framework.canvas import canvas
+import os
 from framework.functions import get_files
 from framework.histogram import histogram
-
-import json
-from copy import deepcopy
-import os
 from optparse import OptionParser
-import multiprocessing as mp
-
+from copy import deepcopy
 
 # -- Define functions -- #
 def add_parsing_opts():
-  """ Function with base parsing arguments used by any script """
-  parser = OptionParser(usage = "python nanogen_analysis.py [options]", 
+    """ Function with base parsing arguments used by any script """
+    parser = OptionParser(usage = "python nanogen_analysis.py [options]", 
                         description = "Main options for running nanogen analysis") 
-  parser.add_option("--inputFolder", dest = "inputFolder", default = "outfiles",
-              help = "Input file to run the analysis.")
-  parser.add_option("--mcaFile", dest = "mcaFile", default = "mca.txt",
-              help = "File with information samples.")
-  return parser
+    parser.add_option("--inputFolder", dest = "inputFolder", default = "outfiles",
+                help = "Input file to run the analysis.")
+    parser.add_option("--outputFolder", dest = "outpath", default = "outplots",
+                help = "Output folder to store plots.")
+    parser.add_option("--mcaFile", dest = "mcaFile", default = "mca.txt",
+                help = "File with information samples.")
+    return parser
+
+_nodelete = {}
+def new_label(text, x0,y0,x1,y1, textSize):
+    align=12 
+    textSize=0.07
+    label = r.TPaveText(x0,y0,x1,y1, "NDC");
+    label.SetTextSize(textSize)
+    label.SetFillColor(0)
+    label.SetFillStyle(0)
+    label.SetLineStyle(2)
+    label.SetLineColor(0)
+    label.SetTextAlign(align)
+    label.SetTextFont(42)
+    label.AddText(text)
+    return label
+
+def plot(files, opts, plotname):
+    # From here on everything is hardcoded simply because it's easier to organise
+    # and this is a very specific analysis...
+    
+    central_qcut42      = histogram(files["central_qCut42_hists"], opts.inputFolder, plotname)
+    central_qcut150     = histogram(files["central_qCut150_hists"], opts.inputFolder, plotname)
+    ttW_gennano_qcut42  = histogram(files["ttW_gennano_qcut42_hists"], opts.inputFolder, plotname)
+    ttW_gennano_qcut150 = histogram(files["ttW_gennano_qcut150_hists"], opts.inputFolder, plotname)
+
+    # Nominal histograms:
+    hnom_central_qcut42      = central_qcut42.get_nom_histo()     
+    hnom_central_qcut150     = central_qcut150.get_nom_histo()
+    hnom_ttW_gennano_qcut42  = ttW_gennano_qcut42.get_nom_histo()
+    hnom_ttW_gennano_qcut150 = ttW_gennano_qcut150.get_nom_histo()
+    
+    hunc_central_qcut42      = central_qcut42.get_unc_histo()     
+    hunc_central_qcut150     = central_qcut150.get_unc_histo()
+    hunc_ttW_gennano_qcut42  = ttW_gennano_qcut42.get_unc_histo()
+    hunc_ttW_gennano_qcut150 = ttW_gennano_qcut150.get_unc_histo()
+    
+    hratio_central_qcut42      = central_qcut42.get_ratio_histo(hnom_central_qcut42)     
+    hratio_central_qcut150     = central_qcut150.get_ratio_histo(hnom_central_qcut42)
+    hratio_ttW_gennano_qcut42  = ttW_gennano_qcut42.get_ratio_histo(hnom_central_qcut42)
+    hratio_ttW_gennano_qcut150 = ttW_gennano_qcut150.get_ratio_histo(hnom_central_qcut42)
+
+
+    # Create a legend:
+    l = r.TLegend(0.58, 0.68, 0.78, 0.88)
+    l.SetName("l_%s"%(plotname))
+    l.SetBorderSize(0)
+    l.SetFillColor(0)
+    l.SetShadowColor(0)
+    l.SetFillStyle(0)
+    l.SetTextFont(42)
+    l.SetTextSize(0.042)
+    l.SetNColumns(1)    
+    l.AddEntry(hnom_central_qcut42, "Central (Q = 42 GeV)", "l")
+    l.AddEntry(hnom_central_qcut150, "Central (Q = 150 GeV)", "l")
+    l.AddEntry(hnom_ttW_gennano_qcut42, "FxFx@1j (Q = 42 GeV)", "l")
+    l.AddEntry(hnom_ttW_gennano_qcut150, "FxFx@1j (Q = 150 GeV)", "l")
+
+    # Now start plotting things
+    # Some labels:
+    cmsprel   = new_label( "#bf{CMS} Internal", .08, .91, .5, .97 ,0.07)
+    lab_scale = new_label( "scale unc.", .78, .81, .89, .92, 0.3)
+    lab_ratio = new_label( "ratio", 0.78, .81, .89, .92, 0.3)
+
+    c = r.TCanvas("c_%s"%(plotname), "", 800, 1200)
+    c.Divide(1, 3)
+    p1 = c.GetPad(1)
+    p1.SetPad(0, 0.55, 1, 1)
+    p1.SetBottomMargin(0)
+
+    p2 = c.GetPad(2)
+    p2.SetPad(0, 0.35, 1, 0.55)
+    p2.SetTopMargin(0)
+    p2.SetBottomMargin(0)
+ 
+    p3 = c.GetPad(3)
+    p3.SetPad(0, 0.05, 1, 0.35)
+    p3.SetTopMargin(0)
+    p3.SetBottomMargin(0.28)
+    
+    p1.cd()
+    hnom_central_qcut42.Draw("hist")
+    hnom_central_qcut42.GetYaxis().SetNdivisions(505)
+    hnom_central_qcut42.GetXaxis().SetLabelSize(0)
+    hnom_central_qcut150.Draw("hist same")    
+    hnom_ttW_gennano_qcut150.Draw("hist same") 
+    hnom_ttW_gennano_qcut42.Draw("hist same")
+    cmsprel.Draw("same")
+    l.Draw("same")
+    
+    unity = deepcopy(hnom_central_qcut42.Clone("unity_%s"%plotname))
+    for bini in range(1, unity.GetNbinsX()+1):
+        unity.SetBinContent(bini, 1)
+    unity.SetLineColor(r.kBlack)
+    
+    p2.cd()
+    hunc_central_qcut42.Draw("e2")
+    hunc_central_qcut42.GetYaxis().SetRangeUser(0.2, 1.8)
+    hunc_central_qcut42.GetYaxis().SetNdivisions(505)
+    hunc_central_qcut42.GetYaxis().SetLabelSize(0.1)
+    hunc_central_qcut42.GetXaxis().SetLabelSize(0)
+    hunc_central_qcut150.Draw("e2 same ")
+    hunc_ttW_gennano_qcut150.Draw("e2 same")
+    hunc_ttW_gennano_qcut42.Draw("e2 same")
+    hunc_central_qcut42.SetFillColorAlpha(hunc_central_qcut42.GetFillColor(), 0.4)
+    unity.Draw("hist same")
+    lab_scale.Draw("same")
+    
+
+    
+    p3.cd()  
+    hratio_central_qcut150.GetXaxis().SetTitleSize(0.05)
+    hratio_central_qcut150.Draw("p")
+    hratio_central_qcut150.GetYaxis().SetRangeUser(0.2, 1.8)
+    hratio_central_qcut150.GetYaxis().SetNdivisions(505)
+    hratio_central_qcut150.GetYaxis().SetLabelSize(0.1)
+    hratio_central_qcut150.GetXaxis().SetLabelSize(0.1)
+
+    counter = 2
+    if plotname == "Njet":
+        for bini in range(1, 1+hratio_central_qcut150.GetNbinsX()):
+            hratio_central_qcut150.GetXaxis().SetBinLabel(bini, "%d"%counter)
+            counter += 1
+    hratio_central_qcut150.GetXaxis().CenterLabels()
+    hratio_central_qcut150.GetXaxis().SetTitleOffset(1.1)
+    hratio_central_qcut150.GetXaxis().SetTitleSize(0.12)
+    
+    hratio_ttW_gennano_qcut42.Draw("p same") 
+    hratio_ttW_gennano_qcut150.Draw("p same")
+    unity.Draw("hist same")
+  
+    lab_ratio.Draw("same")  
+    if not os.path.exists(opts.outpath):
+        os.system("mkdir -p %s"%opts.outpath)
+    c.SaveAs("%s/%s.png"%(opts.outpath, plotname))
+    c.SaveAs("%s/%s.pdf"%(opts.outpath, plotname))
+    return
+
 
 if __name__ == "__main__":
-  ## Now start plotting things
-  plots = ["Njet", 
-           "leadingLeptonPt", "leadingLeptonEta", 
-           "leadingJetPt", "leadingJetEta", 
-           "trailingLeptonPt", "trailingLeptonEta", 
-           "trailingJetEta", "trailingJetPt"]
-  
-  parser = add_parsing_opts()
-  (opts, args) = parser.parse_args()
-  
-  files = get_files(opts)
-  counter = 0
-  for filename, fileinfo in files.items():
-    histogram(fileinfo, opts.inputFolder, "Njet")
-    if counter == 1: break
-    counter += 1
-    
-  '''
-  for plot in plots:
-    # ============================================== Now another normalizing to xsec
-    canv = canvas(plot+"_normalizedToXsec")
-    c1,p1,p2 = canv.new_canvas()
-    l1 = canv.make_legend(.60, .6, .78, .88)
-    l1.SetNColumns(1)
-    cmsprel = canv.doSpam()
+    ## Now start plotting things
+    plots = ["Njet", 
+            "leadingLeptonPt", "leadingLeptonEta", 
+            "leadingJetPt", "leadingJetEta", 
+            "trailingLeptonPt", "trailingLeptonEta", 
+            "trailingJetEta", "trailingJetPt"]
 
-    l2 = canv.make_legend(.60, .7, .88, .88)
-    l2.SetNColumns(1)
+    parser = add_parsing_opts()
+    (opts, args) = parser.parse_args()
 
-
-    # temporal:  
-    fqcut150 = r.TFile.Open("./outrootfiles/ttw_gennanoSergio_qcut150_hist.root")
-    fqcut42 = r.TFile.Open("./outrootfiles/ttw_gennanoSergio_qcut42_hist.root")
-    fcentral = r.TFile.Open("./outrootfiles/TTWToLNu_central_hist.root")
-
-    h_qcut150 = deepcopy(fqcut150.Get(plot)) 
-    #h_qcut150.Scale(1.14/h_qcut150.Integral())
-    h_qcut150.Scale(1/679.2)
-    h_qcut150.SetLineColor(r.kRed+1)
-    h_stat_qcut50 = deepcopy(h_qcut150)
-    h_stat_qcut50.SetLineWidth(0)
-    h_stat_qcut50.SetFillColorAlpha(r.kRed+1, 0.4)
-    h_stat_qcut50.SetFillStyle(3004)
-
-    h_qcut42 = deepcopy(fqcut42.Get(plot)) 
-    #h_qcut42.Scale(1.14/h_qcut42.Integral())
-    h_qcut42.Scale(1/679.2)
-    h_qcut42.SetLineColor(r.kCyan+1)
-    h_stat_qcut42 = deepcopy(h_qcut42)
-    h_stat_qcut42.SetLineWidth(0)
-    h_stat_qcut42.SetFillColorAlpha(r.kCyan+1, 0.4)
-    h_stat_qcut42.SetFillStyle(3004)
-
-    h_central = deepcopy(fcentral.Get(plot)) 
-    #h_central.Scale(1/h_central.Integral())
-    h_central.Scale(1/592.) 
-    h_central.SetLineColor(r.kBlack)
-    h_stat_central = deepcopy(h_central)
-    h_stat_central.SetLineWidth(0)
-    h_stat_central.SetFillColorAlpha(r.kBlack, 0.4)
-    h_stat_central.SetFillStyle(3004)
-
-
-    print("Events from FxFx@1J (qCut = 42 GeV): %3.2f (histogram normalized to 679.2 fb-1) "%(h_qcut150.Integral()*679.2))
-    print("Events from FxFx@1J (qCut = 150 GeV, pT = 60): %3.2f (histogram normalized to 679.2 fb-1)"%(h_qcut42.Integral()*679.2))
-    print("Events from Central: %3.2f (histogram normalized to 592 fb-1)"%(h_central.Integral()*592))
-
-    l1.AddEntry(h_qcut150, "FxFx@1J (qCut = 150 GeV)","l")
-    l1.AddEntry(h_qcut42, "FxFx@1J (qCut = 42 GeV)", "l")  
-    l1.AddEntry(h_central, "Central", "l")  
-
-    h_ratio_qcut150 = deepcopy(h_qcut150.Clone("ratio_%s_new"%plot))
-    h_ratio_qcut42 = deepcopy(h_qcut42.Clone("ratio_%s_old"%plot))
-    h_ratio_central = deepcopy(h_central.Clone("ratio_%s_nloqcd"%plot))
-
-    h_ratio_qcut150.Divide(h_central)
-    h_ratio_qcut150.SetMarkerSize(1)
-    h_ratio_qcut150.SetMarkerStyle(20)
-    h_ratio_qcut150.SetLineColor(r.kRed+1)
-    h_ratio_qcut150.SetMarkerColor(r.kRed+1)
-
-    h_ratio_qcut42.Divide(h_central)
-    h_ratio_qcut42.SetMarkerSize(1)
-    h_ratio_qcut42.SetMarkerStyle(20)
-    h_ratio_qcut42.SetLineColor(r.kCyan+1)
-    h_ratio_qcut42.SetMarkerColor(r.kCyan+1)
-
-    h_ratio_central.Divide(h_central)
-
-#    h_ratio.GetYaxis().SetRangeUser(max(h_ratio.GetMinimum()*0.9,  0.1), min(h_ratio.GetMaximum()*1.1, 1.9))
-    h_ratio_qcut150.GetYaxis().SetRangeUser(0.1, 2.3)
-    h_ratio_qcut150.GetYaxis().SetNdivisions(505)
-    h_ratio_qcut150.GetXaxis().SetLabelSize(0.1)
-    h_ratio_qcut150.GetXaxis().SetTitleSize(0.05)
-    h_ratio_qcut150.GetXaxis().SetTitleOffset(h_ratio_qcut150.GetXaxis().GetTitleOffset()*1.2)
-    h_ratio_qcut150.GetXaxis().SetTitleSize(0.1)
-    h_ratio_qcut150.GetYaxis().SetTitle("New/central")
-    h_ratio_qcut150.GetYaxis().SetTitleOffset(1.1)
-    h_ratio_qcut150.GetYaxis().SetTitleSize(0.05)
-    h_ratio_qcut150.GetYaxis().SetTitleSize(0.05)
-
-
-    # ==== DRAW ON FIRST CANVAS ==== #
-    p1.cd()
-    h_qcut150.GetYaxis().SetRangeUser(0., max([h_qcut150.GetMaximum(), h_central.GetMaximum()])*1.1)
-    h_qcut150.Draw("hist")
-    h_qcut150.GetYaxis().SetRangeUser(0., max([h_qcut150.GetMaximum(), h_central.GetMaximum()])*1.1)
-    h_central.Draw("hist same")
-    h_qcut42.Draw("hist same")
-    h_stat_qcut50.Draw("e2 same")
-    h_stat_qcut42.Draw("e2 same")
-    h_stat_central.Draw("e2 same")
-    h_qcut150.SetMaximum(h_qcut150.GetMaximum()*1.2)
-    h_qcut150.GetYaxis().SetTitle("Events")
-    h_qcut150.GetXaxis().SetLabelSize(0)
-    cmsprel.Draw("same")
-    l1.Draw("same")
-
-    # ==== DRAW ON SECOND CANVAS ==== #
-    p2.cd()
-    h_ratio_qcut150.Draw("pe1")
-    h_ratio_qcut150.SetMarkerSize(1)
-    h_ratio_qcut150.SetMarkerStyle(20)
-    h_ratio_qcut150.GetYaxis().SetRangeUser(0.5, 1.5)
-
-    h_ratio_qcut150.GetYaxis().SetNdivisions(505)
-    h_ratio_qcut150.SetMarkerColor(r.kRed+1)
-    h_ratio_qcut42.Draw("pe1 same")
-    h_ratio_qcut42.SetMarkerSize(1)
-    h_ratio_qcut42.SetMarkerStyle(20)
-    h_ratio_central.Draw("hist same")
-    if not os.path.exists(outpath): os.mkdir(outpath)
-    canv.save_canvas(outpath)
-  '''
+    files = get_files(opts)
+    print(files)
+    for plotname in plots:
+        plot(files, opts, plotname)

@@ -1,4 +1,4 @@
 ttW_gennano_qcut150_hists : 679.2 ; color = kRed+1,   legend_name="FxFx@1j (qCut = 150 GeV)"
-ttW_gennano_qcut42_hists  : 679.2 ; color = kCyan+1,   legend_name="FxFx@1j (qCut = 42 GeV)"
+ttW_gennano_qcut42_hists  : 679.2 ; color = kBlue-7,   legend_name="FxFx@1j (qCut = 42 GeV)"
 central_qCut42_hists      : 592.0 ; color = kBlack,   legend_name="Central UL (qCut = 42 GeV)", useForRatio = True
-central_qCut150_hists     : 592.0 ; color = kGreen+1, legend_name="Central UL (qCut = 150 GeV)"
+central_qCut150_hists     : 592.0 ; color = kOrange-2, legend_name="Central UL (qCut = 150 GeV)"

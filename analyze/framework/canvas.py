@@ -42,7 +42,7 @@ class canvas(object):
    def new_canvas(self, doRatio = True):
       if doRatio:
          c = r.TCanvas("c_%s"%(self.name), "", self.w, self.h)
-         c.Divide(1, 2)
+         c.Divide(1, 3)
          p1 = c.GetPad(1)
          p1.SetPad(self.p1_x1, self.p1_y1, self.p1_x2, self.p1_y2)
          p1.SetTopMargin(p1.GetTopMargin()*1.1)

@@ -47,10 +47,11 @@ if __name__ == "__main__":
     os.system("mkdir -p %s"%opts.outpath)
     
   files_ = os.listdir(opts.inputFolder)
-  njobs = len(files_)
+  #njobs = len(files_)
   
-  multiproc( submit, ((opts, f) for f in files_), njobs )
-        
+  #multiproc( submit, ((opts, f) for f in files_), njobs )
+  for file_ in files_:
+    submit((opts, file_))     
   
 
 
