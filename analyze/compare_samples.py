@@ -35,6 +35,21 @@ def new_label(text, x0,y0,x1,y1, textSize):
     label.AddText(text)
     return label
 
+def divide_histos(hnum, hden_input, color):
+    # Remove error from the denominator
+    hden = deepcopy(hden_input)
+    for bini in range(1, 1+hden.GetNbinsX()+1):
+        hden.SetBinError(bini, 0)
+    hratio = deepcopy(hnum.Clone(hnum.GetName()+"_ratio"))
+    hratio.Divide(hden)
+    hratio.SetLineColor(color)
+    hratio.SetLineWidth(1)
+    hratio.SetFillColorAlpha(color, 1)
+    hratio.SetFillStyle(1001)
+    hratio.SetMarkerColor(color)
+    hratio.SetMarkerStyle(20)
+    return hratio
+    
 def plot(files, opts, plotname):
     # From here on everything is hardcoded simply because it's easier to organise
     # and this is a very specific analysis...
@@ -50,17 +65,24 @@ def plot(files, opts, plotname):
     hnom_ttW_gennano_qcut42  = ttW_gennano_qcut42.get_nom_histo()
     hnom_ttW_gennano_qcut150 = ttW_gennano_qcut150.get_nom_histo()
     
-    hunc_central_qcut42      = central_qcut42.get_unc_histo()     
-    hunc_central_qcut150     = central_qcut150.get_unc_histo()
-    hunc_ttW_gennano_qcut42  = ttW_gennano_qcut42.get_unc_histo()
-    hunc_ttW_gennano_qcut150 = ttW_gennano_qcut150.get_unc_histo()
     
-    hratio_central_qcut42      = central_qcut42.get_ratio_histo(hnom_central_qcut42)     
-    hratio_central_qcut150     = central_qcut150.get_ratio_histo(hnom_central_qcut42)
-    hratio_ttW_gennano_qcut42  = ttW_gennano_qcut42.get_ratio_histo(hnom_central_qcut42)
-    hratio_ttW_gennano_qcut150 = ttW_gennano_qcut150.get_ratio_histo(hnom_central_qcut42)
-
-
+    # Histograms with total uncertainty (scale+stat)
+    hscaleunc_central_qcut42      = central_qcut42.get_scale_histo()     
+    hscaleunc_central_qcut150     = central_qcut150.get_scale_histo()
+    hscaleunc_ttW_gennano_qcut42  = ttW_gennano_qcut42.get_scale_histo()
+    hscaleunc_ttW_gennano_qcut150 = ttW_gennano_qcut150.get_scale_histo()
+    
+    # -- Get all the ratios for the second pad
+    hratio_scaleunc_central_qcut42      = divide_histos(hscaleunc_central_qcut42, hnom_central_qcut42, central_qcut42.color)
+    hratio_scaleunc_central_qcut150     = divide_histos(hscaleunc_central_qcut150, hnom_central_qcut150, central_qcut150.color)
+    hratio_scaleunc_ttW_gennano_qcut42  = divide_histos(hscaleunc_ttW_gennano_qcut42, hnom_ttW_gennano_qcut42, ttW_gennano_qcut42.color)
+    hratio_scaleunc_ttW_gennano_qcut150 = divide_histos(hscaleunc_ttW_gennano_qcut150, hnom_ttW_gennano_qcut150, ttW_gennano_qcut150.color)
+    
+    # -- Get all the ratios for the third pad
+    hratio_totalunc_central_qcut150     = divide_histos(hnom_central_qcut150, hnom_central_qcut42, central_qcut150.color)
+    hratio_totalunc_ttW_gennano_qcut42  = divide_histos(hnom_ttW_gennano_qcut42, hnom_central_qcut42, ttW_gennano_qcut42.color)
+    hratio_totalunc_ttW_gennano_qcut150 = divide_histos(hnom_ttW_gennano_qcut150, hnom_central_qcut42, ttW_gennano_qcut150.color)
+    
     # Create a legend:
     l = r.TLegend(0.58, 0.68, 0.78, 0.88)
     l.SetName("l_%s"%(plotname))
@@ -114,39 +136,49 @@ def plot(files, opts, plotname):
     unity.SetLineColor(r.kBlack)
     
     p2.cd()
-    hunc_central_qcut42.Draw("e2")
-    hunc_central_qcut42.GetYaxis().SetRangeUser(0.2, 1.8)
-    hunc_central_qcut42.GetYaxis().SetNdivisions(505)
-    hunc_central_qcut42.GetYaxis().SetLabelSize(0.1)
-    hunc_central_qcut42.GetXaxis().SetLabelSize(0)
-    hunc_central_qcut150.Draw("e2 same ")
-    hunc_ttW_gennano_qcut150.Draw("e2 same")
-    hunc_ttW_gennano_qcut42.Draw("e2 same")
-    hunc_central_qcut42.SetFillColorAlpha(hunc_central_qcut42.GetFillColor(), 0.4)
+    hratio_scaleunc_central_qcut150.GetYaxis().SetTitleSize(0.15)
+    hratio_scaleunc_central_qcut150.GetYaxis().SetTitleOffset(0.7)
+    hratio_scaleunc_central_qcut42.Draw("e2")
+    hratio_scaleunc_central_qcut42.GetYaxis().SetRangeUser(0.6, 1.4)
+    hratio_scaleunc_central_qcut42.GetYaxis().SetNdivisions(505)
+    hratio_scaleunc_central_qcut42.GetYaxis().SetLabelSize(0.1)
+    hratio_scaleunc_central_qcut42.GetXaxis().SetLabelSize(0)
+    hratio_scaleunc_central_qcut150.GetYaxis().SetTitle("Scale uncertainty")
+    
+
+
+    hratio_scaleunc_central_qcut150.Draw("e2 same ")
+    hratio_scaleunc_ttW_gennano_qcut150.Draw("e2 same")
+    hratio_scaleunc_ttW_gennano_qcut42.Draw("e2 same")
+    hratio_scaleunc_central_qcut42.SetFillColorAlpha(hratio_scaleunc_central_qcut42.GetFillColor(), 0.4)
     unity.Draw("hist same")
     lab_scale.Draw("same")
     
 
     
     p3.cd()  
-    hratio_central_qcut150.GetXaxis().SetTitleSize(0.05)
-    hratio_central_qcut150.Draw("p")
-    hratio_central_qcut150.GetYaxis().SetRangeUser(0.2, 1.8)
-    hratio_central_qcut150.GetYaxis().SetNdivisions(505)
-    hratio_central_qcut150.GetYaxis().SetLabelSize(0.1)
-    hratio_central_qcut150.GetXaxis().SetLabelSize(0.1)
+    hratio_totalunc_central_qcut150.GetXaxis().SetTitleSize(0.05)
+    hratio_totalunc_central_qcut150.Draw("pe1")
+    hratio_totalunc_central_qcut150.GetYaxis().SetTitle("Ratio")
+    hratio_totalunc_central_qcut150.GetYaxis().SetTitleSize(0.1)
+
+    hratio_totalunc_central_qcut150.GetYaxis().SetRangeUser(0.5, 1.5)
+    hratio_totalunc_central_qcut150.GetYaxis().SetNdivisions(505)
+    hratio_totalunc_central_qcut150.GetYaxis().SetLabelSize(0.1)
+    hratio_totalunc_central_qcut150.GetXaxis().SetLabelSize(0.1)
+    hratio_totalunc_central_qcut150.GetYaxis().SetLabelSize(0.06)
 
     counter = 2
     if plotname == "Njet":
-        for bini in range(1, 1+hratio_central_qcut150.GetNbinsX()):
-            hratio_central_qcut150.GetXaxis().SetBinLabel(bini, "%d"%counter)
+        for bini in range(1, 1+hratio_totalunc_central_qcut150.GetNbinsX()):
+            hratio_totalunc_central_qcut150.GetXaxis().SetBinLabel(bini, "%d"%counter)
             counter += 1
-    hratio_central_qcut150.GetXaxis().CenterLabels()
-    hratio_central_qcut150.GetXaxis().SetTitleOffset(1.1)
-    hratio_central_qcut150.GetXaxis().SetTitleSize(0.12)
-    
-    hratio_ttW_gennano_qcut42.Draw("p same") 
-    hratio_ttW_gennano_qcut150.Draw("p same")
+    hratio_totalunc_central_qcut150.GetXaxis().CenterLabels()
+    hratio_totalunc_central_qcut150.GetXaxis().SetTitleOffset(1.1)
+    hratio_totalunc_central_qcut150.GetXaxis().SetTitleSize(0.12)
+ 
+    hratio_totalunc_ttW_gennano_qcut42.Draw("pe1 same") 
+    hratio_totalunc_ttW_gennano_qcut150.Draw("pe1 same")
     unity.Draw("hist same")
   
     lab_ratio.Draw("same")  

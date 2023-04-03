@@ -14,9 +14,11 @@ def add_parsing_opts():
   """ Function with base parsing arguments used by any script """
   parser = OptionParser(usage = "python nanogen_analysis.py [options]", 
                         description = "Main options for running nanogen analysis") 
-  parser.add_option("--inputFolder", dest = "inputFolder", default = "files_sergio",
+  parser.add_option("--inputFolder", dest = "inputFolder", default = "samples",
               help = "Input folder to run the analysis.")
-  parser.add_option("--nEvents", dest = "nEvents", type=int, default = 290000,
+  parser.add_option("--inputFile", dest = "inputFile", default = "ttW_gennano_qcut42.root",
+              help = "Input file to run the analysis.")
+  parser.add_option("--nEvents", dest = "nEvents", type=int, default = 270000,
               help = "Number of events to process.")
   parser.add_option("--outpath", dest = "outpath", default = "outfiles",
               help = "Number of events to process.")
@@ -47,11 +49,10 @@ if __name__ == "__main__":
     os.system("mkdir -p %s"%opts.outpath)
     
   files_ = os.listdir(opts.inputFolder)
-  #njobs = len(files_)
   
   #multiproc( submit, ((opts, f) for f in files_), njobs )
-  for file_ in files_:
-    submit((opts, file_))     
+  
+  submit((opts, opts.inputFile))     
   
 
 
